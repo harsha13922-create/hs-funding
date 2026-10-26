@@ -1,0 +1,464 @@
+DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HS FUNDING - Loan Management</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f1f4f8;color:#172033}
+header{background:#10243b;color:white;padding:18px;text-align:center}
+header h1{margin:0;font-size:25px}
+header p{margin:6px 0 0}
+.container{padding:12px;max-width:1100px;margin:auto}
+.card{background:white;padding:16px;margin:12px 0;border-radius:12px;box-shadow:0 2px 8px #0001}
+input,select,textarea,button{width:100%;padding:11px;margin:6px 0;border:1px solid #ccd3dd;border-radius:7px;font-size:15px}
+textarea{min-height:65px;resize:vertical}
+button{background:#1356a8;color:white;border:0;font-weight:bold;cursor:pointer}
+button:active{opacity:.8}
+.green{background:#16834a}.red{background:#c62828}.dark{background:#10243b}.orange{background:#b76500}
+.hidden{display:none!important}
+.menu,.stats,.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.menu button{min-height:55px}
+.stat{background:#e8f1ff;padding:13px;border-radius:9px;overflow-wrap:anywhere}
+.stat strong{display:block;margin-top:8px;font-size:19px}
+.small{font-size:12px;color:#5b6575}
+label{display:block;font-size:13px;font-weight:bold;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:12px;min-width:700px}
+th,td{border:1px solid #d8dee8;padding:8px;text-align:left;vertical-align:top}
+th{background:#e8f1ff}
+.tablewrap{overflow-x:auto;margin-top:10px}
+h2,h3{margin-top:4px}
+.inline-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.tag{display:inline-block;background:#e8f1ff;border-radius:5px;padding:4px 7px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.container{padding:20px}}
+@media print{header,.no-print,button{display:none!important}.hidden{display:none!important}body{background:white}.container{max-width:none;padding:0}.card{box-shadow:none;break-inside:avoid}table{font-size:10px;min-width:0}th,td{padding:4px}}
+</style>
+</head>
+<body>
+<header>
+<h1 id="companyTitle">HS FUNDING</h1>
+<p>Loan Management System</p>
+</header>
+
+<div class="container">
+<section id="loginPage" class="card">
+<h2>Login</h2>
+<label>Username</label><input id="username" autocomplete="username" placeholder="Username">
+<label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p class="small">Initial login: admin / 1234. Change your password in Settings.</p>
+</section>
+
+<section id="app" class="hidden">
+<div id="home">
+<div class="card">
+<h2>Dashboard</h2>
+<div class="stats">
+<div class="stat">Customers<strong id="dashCustomers">0</strong></div>
+<div class="stat">Loan Principal<strong id="dashLoans">LKR 0</strong></div>
+<div class="stat">Total Collections<strong id="dashPaid">LKR 0</strong></div>
+<div class="stat">Outstanding<strong id="dashBalance">LKR 0</strong></div>
+<div class="stat">Overdue Loans<strong id="dashOverdue">0</strong></div>
+<div class="stat">Active Loans<strong id="dashActive">0</strong></div>
+</div>
+</div>
+<div class="card">
+<h3>Main Menu</h3>
+<div class="menu">
+<button onclick="show('customers')">Customers</button>
+<button onclick="show('loans')">Loans</button>
+<button onclick="show('payments')">Payments</button>
+<button onclick="show('reports')">Reports & Excel</button>
+<button onclick="show('settings')">Settings / Backup</button>
+<button class="red" onclick="logout()">Logout</button>
+</div>
+</div>
+</div>
+
+<section id="customers" class="card hidden">
+<h2>Customer Management</h2>
+<input id="cSearch" placeholder="Search customer ID, name, phone, NIC" oninput="renderCustomers()">
+<input id="cName" placeholder="Customer full name">
+<input id="cPhone" placeholder="Phone number">
+<input id="cNic" placeholder="NIC number">
+<textarea id="cAddress" placeholder="Full address"></textarea>
+<input id="cGuarantor" placeholder="Guarantor name">
+<input id="cGuarantorPhone" placeholder="Guarantor phone">
+<textarea id="cNotes" placeholder="Notes"></textarea>
+<input id="cId" type="hidden">
+<div class="inline-buttons">
+<button onclick="saveCustomer()">Save Customer</button>
+<button class="dark" onclick="clearCustomer()">Clear Form</button>
+</div>
+<div class="tablewrap"><table><thead><tr><th>ID</th><th>Name / Contact</th><th>Address</th><th>Guarantor</th><th>Actions</th></tr></thead><tbody id="customerRows"></tbody></table></div>
+<button class="dark" onclick="goHome()">Back to Dashboard</button>
+</section>
+
+<section id="loans" class="card hidden">
+<h2>Loan Management</h2>
+<label>Customer</label><select id="lCustomer"></select>
+<label>Loan Type</label>
+<select id="lType" onchange="calculateLoan()">
+<option value="Daily">Daily</option><option value="Weekly">Weekly</option><option value="Monthly">Monthly</option><option value="Two-weekly">Two-weekly</option>
+</select>
+<label>Loan Amount (LKR)</label><input id="lAmount" type="number" min="0" step="0.01" oninput="calculateLoan()" placeholder="Loan principal">
+<label>Interest Rate (%)</label><input id="lRate" type="number" min="0" step="0.01" oninput="calculateLoan()" placeholder="Interest %">
+<label>Loan Term (months)</label><input id="lMonths" type="number" min="1" step="1" value="1" oninput="calculateLoan()">
+<label>Loan Start Date</label><input id="lStart" type="date" onchange="calculateLoan()">
+<label>Manager approval for additional loan</label><select id="lApproval"><option value="no">Not approved</option><option value="yes">Approved</option></select>
+<textarea id="lNotes" placeholder="Loan notes"></textarea>
+<div class="stat">Interest Amount<strong id="calcInterest">LKR 0.00</strong></div>
+<div class="stat">Total Repayment<strong id="calcTotal">LKR 0.00</strong></div>
+<div class="stat">Instalment / Rental<strong id="calcEach">LKR 0.00</strong></div>
+<div class="stat">Number of Instalments<strong id="calcCount">0</strong></div>
+<p class="small">Calculation uses flat interest. Daily loans use 20 collection days per month; weekly uses 4 instalments per month. Actual dates and local business rules may differ.</p>
+<button onclick="saveLoan()">Create Loan</button>
+<div class="tablewrap"><table><thead><tr><th>Loan ID</th><th>Customer</th><th>Type</th><th>Principal</th><th>Total</th><th>Rental</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead><tbody id="loanRows"></tbody></table></div>
+<button class="dark" onclick="goHome()">Back to Dashboard</button>
+</section>
+
+<section id="payments" class="card hidden">
+<h2>Record Payment</h2>
+<label>Loan</label><select id="pLoan" onchange="showPaymentBalance()"></select>
+<div id="paymentBalance" class="small"></div>
+<label>Payment Date</label><input id="pDate" type="date">
+<label>Amount (LKR)</label><input id="pAmount" type="number" min="0.01" step="0.01" placeholder="Payment amount">
+<label>Payment Method</label><select id="pMethod"><option>Cash</option><option>Bank Transfer</option><option>Online</option><option>Other</option></select>
+<textarea id="pNotes" placeholder="Payment notes"></textarea>
+<button class="green" onclick="savePayment()">Save Payment & Receipt</button>
+<h3>Recent Payments</h3>
+<div class="tablewrap"><table><thead><tr><th>Receipt</th><th>Date</th><th>Customer</th><th>Loan ID</th><th>Amount</th><th>Method</th><th>Status</th><th><th>Action</th></tr></thead><tbody id="paymentRows"></tbody></table></div>
+<button class="dark" onclick="goHome()">Back to Dashboard</button>
+</section>
+
+<section id="reports" class="card hidden">
+<h2>Reports & Excel Download</h2>
+<p class="small">Filter records below, then download a CSV file that opens in Excel or Google Sheets. The CSV contains actual saved data.</p>
+<label>Report Type</label>
+<select id="rType" onchange="renderReport()">
+<option value="all">All Customer / Loan Details</option>
+<option value="overdue">Overdue Loans</option>
+<option value="balance">Outstanding Balances</option>
+<option value="payments">Payment History</option>
+<option value="collections">Collections by Date</option>
+<option value="customers">Customer List</option>
+<option value="loans">Loan List</option>
+</select>
+<label>Search customer ID, name, phone or loan ID</label><input id="rSearch" placeholder="Search..." oninput="renderReport()">
+<div class="grid">
+<div><label>Date From</label><input id="rFrom" type="date" onchange="renderReport()"></div>
+<div><label>Date To</label><input id="rTo" type="date" onchange="renderReport()"></div>
+<div><label>Loan Type</label><select id="rLoanType" onchange="renderReport()"><option value="">All Types</option><option>Daily</option><option>Weekly</option><option>Monthly</option><option>Two-weekly</option></select></div>
+</div>
+<div class="stats">
+<div class="stat">Records<strong id="rCount">0</strong></div>
+<div class="stat">Total Amount<strong id="rSum">LKR 0.00</strong></div>
+</div>
+<div class="inline-buttons no-print">
+<button onclick="downloadReport()">Download Excel CSV</button>
+<button class="green" onclick="window.print()">Print Report</button>
+<button class="dark" onclick="exportBackup()">Full Backup JSON</button>
+</div>
+<div class="tablewrap"><table><thead id="reportHead"></thead><tbody id="reportRows"></tbody></table></div>
+<button class="dark no-print" onclick="goHome()">Back to Dashboard</button>
+</section>
+
+<section id="settings" class="card hidden">
+<h2>Settings & Backup</h2>
+<label>Company Name</label><input id="sCompany" placeholder="HS FUNDING">
+<label>Company Phone</label><input id="sPhone" placeholder="Company phone">
+<label>Company Email</label><input id="sEmail" type="email" placeholder="Company email">
+<label>Default Interest Rate (%)</label><input id="sRate" type="number" min="0" step="0.01">
+<label>New Username</label><input id="sUsername" placeholder="New login username">
+<label>New Password</label><input id="sPassword" type="password" placeholder="New login password">
+<button onclick="saveSettings()">Save Settings</button>
+<hr>
+<h3>Data Backup & Restore</h3>
+<p class="small">Download backups regularly. Records are stored in this browser on this device; they are not automatically uploaded to the internet.</p>
+<button onclick="exportBackup()">Download Full Backup JSON</button>
+<label>Restore Backup JSON</label><input id="backupFile" type="file" accept=".json,application/json">
+<button class="orange" onclick="importBackup()">Restore Backup (replaces current records)</button>
+<button class="dark" onclick="goHome()">Back to Dashboard</button>
+</section>
+</section>
+</div>
+
+<script>
+"use strict";
+const KEY={customers:"hs_customers",loans:"hs_loans",payments:"hs_payments",settings:"hs_settings"};
+const $=id=>document.getElementById(id);
+const read=k=>{try{const x=JSON.parse(localStorage.getItem(k)||"[]");return Array.isArray(x)?x:[]}catch(e){return []}};
+const getSettings=()=>{try{return JSON.parse(localStorage.getItem(KEY.settings)||"{}")}catch(e){return {}}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const customers=()=>read(KEY.customers),loans=()=>read(KEY.loans),payments=()=>read(KEY.payments);
+const money=n=>"LKR "+Number(n||0).toLocaleString("en-LK",{minimumFractionDigits:2,maximumFractionDigits:2});
+const today=()=>new Date().toISOString().slice(0,10);
+const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=(prefix,list,field="id")=>prefix+(list.reduce((m,x)=>Math.max(m,Number(String(x[field]||"").replace(/\D/g,""))||0),1000)+1);
+function customerName(id){return customers().find(c=>c.id===id)?.name||"Unknown customer"}
+function loanPaid(id){return payments().filter(p=>p.loanId===id).reduce((s,p)=>s+Number(p.amount||0),0)}
+function loanBalance(l){return Math.max(0,Number(l.total||0)-loanPaid(l.id))}
+function loanLastPayment(id){return payments().filter(p=>p.loanId===id).map(p=>p.date).sort().pop()||""}
+function loanStatus(l){if(loanBalance(l)<=0.005)return"Completed";if(l.dueDate&&l.dueDate<today())return"Overdue";return"Active"}
+function daysBetween(a,b){if(!a)return 0;return Math.max(0,Math.floor((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/86400000))}
+function loanOverdueDays(l){return l.dueDate&&loanBalance(l)>0?daysBetween(l.dueDate,today()):0}
+function login(){
+ const s=getSettings(),u=$("username").value.trim(),p=$("password").value;
+ if(u===(s.username||"admin")&&p===(s.password||"1234")){
+ $("loginPage").classList.add("hidden");$("app").classList.remove("hidden");refreshAll();goHome();
+ }else alert("Incorrect username or password.");
+}
+function logout(){$("app").classList.add("hidden");$("loginPage").classList.remove("hidden");$("password").value=""}
+function show(id){
+ ["home","customers","loans","payments","reports","settings"].forEach(x=>$(x).classList.add("hidden"));
+ $(id).classList.remove("hidden");
+ if(id==="customers")renderCustomers();
+ if(id==="loans"){renderCustomerOptions();renderLoans()}
+ if(id==="payments"){renderLoanOptions();renderPayments();showPaymentBalance()}
+ if(id==="reports")renderReport();
+ if(id==="settings")loadSettings();
+}
+function goHome(){show("home");refreshDashboard()}
+function refreshAll(){refreshDashboard();renderCustomers();renderCustomerOptions();renderLoans();renderLoanOptions();renderPayments();renderReport()}
+function refreshDashboard(){
+ const cs=customers(),ls=loans(),ps=payments();
+ $("dashCustomers").textContent=cs.length;
+ $("dashLoans").textContent=money(ls.reduce((s,l)=>s+Number(l.amount||0),0));
+ $("dashPaid").textContent=money(ps.reduce((s,p)=>s+Number(p.amount||0),0));
+ $("dashBalance").textContent=money(ls.reduce((s,l)=>s+loanBalance(l),0));
+ $("dashOverdue").textContent=ls.filter(l=>loanStatus(l)==="Overdue").length;
+ $("dashActive").textContent=ls.filter(l=>loanStatus(l)==="Active").length;
+ const st=getSettings();$("companyTitle").textContent=st.company||"HS FUNDING";
+}
+function clearCustomer(){["cId","cName","cPhone","cNic","cAddress","cGuarantor","cGuarantorPhone","cNotes"].forEach(x=>$(x).value="")}
+function saveCustomer(){
+ const name=$("cName").value.trim().toUpperCase();
+ if(!name){alert("Enter customer name.");return}
+ const list=customers(),id=$("cId").value||uid("CUS",list);
+ const c={id,name,phone:$("cPhone").value.trim(),nic:$("cNic").value.trim().toUpperCase(),address:$("cAddress").value.trim().toUpperCase(),guarantorName:$("cGuarantor").value.trim().toUpperCase(),guarantorPhone:$("cGuarantorPhone").value.trim(),notes:$("cNotes").value.trim(),createdAt:list.find(x=>x.id===id)?.createdAt||today()};
+ const i=list.findIndex(x=>x.id===id);if(i>=0)list[i]=c;else list.push(c);
+ save(KEY.customers,list);clearCustomer();renderCustomers();renderCustomerOptions();renderReport();refreshDashboard();alert("Customer saved: "+id);
+}
+function editCustomer(id){
+ const c=customers().find(x=>x.id===id);if(!c)return;
+ $("cId").value=c.id;$("cName").value=c.name;$("cPhone").value=c.phone||"";$("cNic").value=c.nic||"";$("cAddress").value=c.address||"";$("cGuarantor").value=c.guarantorName||"";$("cGuarantorPhone").value=c.guarantorPhone||"";$("cNotes").value=c.notes||"";
+ window.scrollTo(0,0);
+}
+function deleteCustomer(id){
+ if(loans().some(l=>l.customerId===id)){alert("Cannot delete this customer because linked loans exist.");return}
+ if(!confirm("Delete customer "+id+"?"))return;
+ save(KEY.customers,customers().filter(c=>c.id!==id));renderCustomers();renderCustomerOptions();renderReport();refreshDashboard();
+}
+function renderCustomers(){
+ const q=($("cSearch").value||"").toLowerCase();
+ $("customerRows").innerHTML=customers().filter(c=>[c.id,c.name,c.phone,c.nic,c.address].join(" ").toLowerCase().includes(q)).map(c=>`<tr><td>${safe(c.id)}</td><td>${safe(c.name)}<br>${safe(c.phone)}<br>${safe(c.nic)}</td><td>${safe(c.address)}</td><td>${safe(c.guarantorName)}<br>${safe(c.guarantorPhone)}</td><td><button onclick="editCustomer('${safe(c.id)}')">Edit</button><button class="red" onclick="deleteCustomer('${safe(c.id)}')">Delete</button></td></tr>`).join("");
+}
+function renderCustomerOptions(){
+ const old=$("lCustomer").value;
+ $("lCustomer").innerHTML='<option value="">Select customer</option>'+customers().map(c=>`<option value="${safe(c.id)}">${safe(c.id)} - ${safe(c.name)}</option>`).join("");
+ if(customers().some(c=>c.id===old))$("lCustomer").value=old;
+}
+function calculateLoan(){
+ const amount=Math.max(0,Number($("lAmount").value||0)),rate=Math.max(0,Number($("lRate").value||0)),months=Math.max(1,Number($("lMonths").value||1)),type=$("lType").value;
+ const interest=amount*rate/100*months,total=amount+interest;
+ let count=type==="Daily"?Math.ceil(months*20):type==="Weekly"?Math.ceil(months*4):type==="Two-weekly"?Math.ceil(months*30.4375/14):months;
+ $("calcInterest").textContent=money(interest);$("calcTotal").textContent=money(total);$("calcEach").textContent=money(count?total/count:0);$("calcCount").textContent=count;
+}
+function datePlus(date,days){const d=new Date((date||today())+"T12:00:00");d.setDate(d.getDate()+days);return d.toISOString().slice(0,10)}
+function saveLoan(){
+ const customerId=$("lCustomer").value,amount=Number($("lAmount").value),rate=Number($("lRate").value),months=Number($("lMonths").value),type=$("lType").value,start=$("lStart").value||today();
+ if(!customerId){alert("Select a customer.");return}
+ if(!(amount>0)||rate<0||!(months>0)){alert("Enter valid loan amount, interest and term.");return}
+ const existing=loans().some(l=>l.customerId===customerId&&loanBalance(l)>0);
+ if(existing&&$("lApproval").value!=="yes"){alert("This customer has an outstanding loan. Manager approval is required before creating another loan.");return}
+ const interest=amount*rate/100*months,total=amount+interest;
+ const count=type==="Daily"?Math.ceil(months*20):type==="Weekly"?Math.ceil(months*4):type==="Two-weekly"?Math.ceil(months*30.4375/14):Math.ceil(months);
+ const days=type==="Daily"?count:type==="Weekly"?count*7:type==="Two-weekly"?count*14:Math.ceil(months*30.4375);
+ const list=loans(),id=uid("LN",list);
+ list.push({id,customerId,type,amount,rate,months,interest,total,count,each:total/count,startDate:start,dueDate:datePlus(start,days),managerApproval:$("lApproval").value==="yes",notes:$("lNotes").value.trim(),createdAt:today()});
+ save(KEY.loans,list);renderLoans();renderLoanOptions();renderReport();refreshDashboard();alert("Loan created: "+id);
+}
+function renderLoans(){
+ $("loanRows").innerHTML=loans().slice().reverse().map(l=>`<tr><td>${safe(l.id)}</td><td>${safe(customerName(l.customerId))}</td><td>${safe(l.type)}</td><td>${money(l.amount)}</td><td>${money(l.total)}</td><td>${money(l.each)}</td><td>${money(loanBalance(l))}</td><td>${loanStatus(l)}</td><td><button onclick="printAgreement('${safe(l.id)}')">Agreement</button></td></tr>`).join("");
+}
+function renderLoanOptions(){
+ const old=$("pLoan").value;
+ $("pLoan").innerHTML='<option value="">Select loan</option>'+loans().filter(l=>loanBalance(l)>0).map(l=>`<option value="${safe(l.id)}">${safe(l.id)} - ${safe(customerName(l.customerId))} - Balance ${money(loanBalance(l))}</option>`).join("");
+ if(loans().some(l=>l.id===old&&loanBalance(l)>0))$("pLoan").value=old;
+}
+function showPaymentBalance(){const l=loans().find(x=>x.id===$("pLoan").value);$("paymentBalance").textContent=l?`Customer: ${customerName(l.customerId)} | Balance: ${money(loanBalance(l))} | Rental: ${money(l.each)}`:"Select a loan to see balance."}
+function savePayment(){
+ const loanId=$("pLoan").value,amount=Number($("pAmount").value),date=$("pDate").value||today(),l=loans().find(x=>x.id===loanId);
+ if(!l){alert("Select a loan.");return}
+ if(!(amount>0)){alert("Enter a valid payment amount.");return}
+ if(amount>loanBalance(l)+0.005&&!confirm("Payment exceeds outstanding balance. Save anyway?"))return;
+ const list=payments(),id=uid("RC",list);
+ const p={id,receipt:id,loanId,date,amount,method:$("pMethod").value,notes:$("pNotes").value.trim(),createdAt:today()};
+ list.push(p);save(KEY.payments,list);
+ $("pAmount").value="";$("pNotes").value="";
+ renderLoanOptions();renderPayments();renderLoans();renderReport();refreshDashboard();showPaymentBalance();printReceipt(id);
+}
+function renderPayments(){
+ $("paymentRows").innerHTML=payments().slice().reverse().map(p=>{
+ const l=loans().find(x=>x.id===p.loanId);
+
+ return `<tr>
+ <td>${safe(p.receipt||p.id)}</td>
+ <td>${safe(p.date)}</td>
+ <td>${safe(l?customerName(l.customerId):"Unknown")}</td>
+ <td>${safe(p.loanId)}</td>
+ <td>${money(p.amount)}</td>
+ <td>${safe(p.method)}</td>
+ <td>
+ <span style="
+ display:inline-block;
+ padding:5px 10px;
+ border-radius:15px;
+ background:#dcfce7;
+ color:#166534;
+ font-weight:bold;
+ ">
+ ✓ COMPLETED
+ </span>
+ </td>
+ <td><button onclick="printReceipt('${safe(p.id)}')">Print Receipt</button></td>
+ </tr>`;
+ }).join("");
+}
+function printDoc(title,html){
+ const w=window.open("","_blank");
+ if(!w){alert("Allow pop-ups to print this document.");return}
+ w.document.write('<!doctype html><html><head><meta charset="UTF-8"><title>'+safe(title)+'</title><style>body{font-family:Arial;padding:24px;color:#172033}h1,h2{text-align:center}table{width:100%;border-collapse:collapse}td,th{border:1px solid #aaa;padding:8px;text-align:left}.line{margin-top:35px;display:flex;justify-content:space-between}</style></head><body>'+html+'<script>window.onload=()=>window.print()<\/script></body></html>');
+ w.document.close();
+}
+function printReceipt(id){
+ const p=payments().find(x=>x.id===id);if(!p)return;
+ const l=loans().find(x=>x.id===p.loanId),c=l&&customers().find(x=>x.id===l.customerId),s=getSettings();
+ printDoc("Payment Receipt",`<h1>${safe(s.company||"HS FUNDING")}</h1><h2>PAYMENT RECEIPT</h2><p><b>Receipt:</b> ${safe(p.receipt||p.id)}</p><p><b>Date:</b> ${safe(p.date)}</p><p><b>Customer:</b> ${safe(c?.name||"")}</p><p><b>Address:</b> ${safe(c?.address||"")}</p><p><b>Phone:</b> ${safe(c?.phone||"")}</p><p><b>Loan ID:</b> ${safe(p.loanId)}</p><p><b>Payment Method:</b> ${safe(p.method)}</p><h2>Amount Paid: ${money(p.amount)}</h2><p><b>Outstanding Balance:</b> ${money(l?loanBalance(l):0)}</p><p>${safe(p.notes||"")}</p><div class="line"><span>Customer Signature: __________</span><span>Officer Signature: __________</span></div>`);
+}
+
+function printAgreement(id){
+ const l=loans().find(x=>x.id===id);
+ if(!l){
+  alert("Loan not found.");
+  return;
+ }
+ const c=customers().find(x=>x.id===l.customerId)||{};
+ const s=getSettings();
+
+ printDoc("Loan Agreement",`
+  <h1>${safe(s.company||"HS FUNDING")}</h1>
+  <h2>LOAN AGREEMENT</h2>
+  <p><b>Loan ID:</b> ${safe(l.id)}</p>
+  <p><b>Customer:</b> ${safe(c.name||"")}</p>
+  <p><b>NIC:</b> ${safe(c.nic||"")}</p>
+  <p><b>Phone:</b> ${safe(c.phone||"")}</p>
+  <p><b>Address:</b> ${safe(c.address||"")}</p>
+  <p><b>Guarantor:</b> ${safe(c.guarantorName||"")}</p>
+  <p><b>Guarantor Phone:</b> ${safe(c.guarantorPhone||"")}</p>
+  <table>
+   <tr><th>Loan Type</th><td>${safe(l.type)}</td></tr>
+   <tr><th>Loan Amount</th><td>${money(l.amount)}</td></tr>
+   <tr><th>Interest Rate</th><td>${safe(l.rate)}%</td></tr>
+   <tr><th>Interest</th><td>${money(l.interest)}</td></tr>
+   <tr><th>Total Repayment</th><td>${money(l.total)}</td></tr>
+   <tr><th>Instalment</th><td>${money(l.each)}</td></tr>
+   <tr><th>Number of Instalments</th><td>${safe(l.count)}</td></tr>
+   <tr><th>Start Date</th><td>${safe(l.startDate)}</td></tr>
+   <tr><th>Final Due Date</th><td>${safe(l.dueDate)}</td></tr>
+  </table>
+  <p><b>Notes:</b> ${safe(l.notes||"")}</p>
+  <p>I acknowledge the loan details and repayment terms stated above.</p>
+  <p>Customer Signature: __________________</p>
+  <p>Company Signature: __________________</p>
+ `);
+}
+
+function loadSettings(){
+ const s=getSettings();
+ $("sCompany").value=s.company||"HS FUNDING";
+ $("sPhone").value=s.phone||"";
+ $("sEmail").value=s.email||"";
+ $("sRate").value=s.rate??0;
+ $("sUsername").value=s.username||"admin";
+ $("sPassword").value="";
+}
+{
+ const s=getSettings();$("sCompany").value=s.company||"HS FUNDING";$("sPhone").value=s.phone||"";$("sEmail").value=s.email||"";$("sRate").value=s.rate??0;$("sUsername").value=s.username||"admin";$("sPassword").value="";
+}
+function saveSettings(){
+ const old=getSettings(),password=$("sPassword").value;
+ const s={company:$("sCompany").value.trim()||"HS FUNDING",phone:$("sPhone").value.trim(),email:$("sEmail").value.trim(),rate:Number($("sRate").value||0),username:$("sUsername").value.trim()||"admin",password:password||old.password||"1234"};
+ if(!s.company||!s.username){alert("Company name and username are required.");return}
+ save(KEY.settings,s);$("companyTitle").textContent=s.company;
+ $("sPassword").value="";alert("Settings saved.");
+}
+function csvCell(v){let s=String(v??"");if(/^[=+\-@]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'}
+function downloadCSV(filename,headers,rows){
+ const csv="\uFEFF"+[headers,...rows].map(row=>row.map(csvCell).join(",")).join("\r\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+ const url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function reportData(){
+ const type=$("rType").value,q=$("rSearch").value.trim().toLowerCase(),from=$("rFrom").value,to=$("rTo").value,filterType=$("rLoanType").value;
+ const cs=customers(),ls=loans(),ps=payments();
+ const matches=(c,l)=>{const str=[c?.id,c?.name,c?.phone,c?.nic,c?.address,l?.id].join(" ").toLowerCase();return (!q||str.includes(q))&&(!filterType||!l||l.type===filterType)};
+ if(type==="customers"){
+  return {headers:["Customer ID","Customer Name","Address","Phone Number","NIC","Guarantor Name","Guarantor Phone","Notes","Created Date"],rows:cs.filter(c=>matches(c,null)).map(c=>[c.id,c.name,c.address,c.phone,c.nic,c.guarantorName,c.guarantorPhone,c.notes,c.createdAt]),sum:cs.length};
+ }
+ if(type==="payments"||type==="collections"){
+  const rows=ps.filter(p=>{const l=ls.find(x=>x.id===p.loanId),c=cs.find(x=>x.id===l?.customerId);return matches(c,l)&&(!from||p.date>=from)&&(!to||p.date<=to)}).sort((a,b)=>a.date.localeCompare(b.date)).map(p=>{const l=ls.find(x=>x.id===p.loanId),c=cs.find(x=>x.id===l?.customerId);return [p.receipt||p.id,p.date,c?.id,c?.name,c?.address,c?.phone,p.loanId,l?.type,p.amount,p.method,p.notes,loanBalance(l||{id:"",total:0})]});
+  return {headers:["Receipt ID","Payment Date","Customer ID","Customer Name","Address","Phone","Loan ID","Loan Type","Payment Amount","Method","Notes","Current Loan Balance"],rows,sum:rows.reduce((s,r)=>s+Number(r[8]||0),0)};
+ }
+ let selected=ls.filter(l=>{const c=cs.find(x=>x.id===l.customerId);return matches(c,l)&&(!from||l.startDate>=from)&&(!to||l.startDate<=to)});
+ if(type==="overdue")selected=selected.filter(l=>loanStatus(l)==="Overdue");
+ if(type==="balance")selected=selected.filter(l=>loanBalance(l)>0);
+ const headers=["Customer ID","Customer Name","Address","Phone Number","NIC","Guarantor Name","Guarantor Phone","Loan ID","Loan Type","Start Date","Loan Amount","Interest Rate %","Interest Amount","Total Payable","Rental / Instalment","Total Instalments","Paid Amount","Remaining Balance","Last Payment Date","Next / Final Due Date","Arrears Age (Days)","Overdue Amount","Reason for Delay","Loan Status","Loan Notes"];
+ const rows=selected.map(l=>{
+  const c=cs.find(x=>x.id===l.customerId)||{},paid=loanPaid(l.id),balance=loanBalance(l),days=loanOverdueDays(l);
+  const reason=days>0?(l.notes||"Reason not recorded"):"";
+  return [c.id,c.name,c.address,c.phone,c.nic,c.guarantorName,c.guarantorPhone,l.id,l.type,l.startDate,l.amount,l.rate,l.interest,l.total,l.each,l.count,paid,balance,loanLastPayment(l.id),l.dueDate,days,days>0?balance:0,reason,loanStatus(l),l.notes];
+ });
+return {headers,rows,sum:rows.reduce((s,r)=>s+Number(r[17]||0),0)};
+}
+function renderReport(){
+ if(!$("reportRows"))return;
+ const d=reportData();$("rCount").textContent=d.rows.length;$("rSum").textContent=money(d.sum);
+ $("reportHead").innerHTML="<tr>"+d.headers.map(h=>"<th>"+safe(h)+"</th>").join("")+"</tr>";
+ $("reportRows").innerHTML=d.rows.map(row=>"<tr>"+row.map(v=>"<td>"+safe(v??"")+"</td>").join("")+"</tr>").join("");
+ if(!d.rows.length)$("reportRows").innerHTML=`<tr><td colspan="${d.headers.length}">No matching records found.</td></tr>`;
+}
+function downloadReport(){
+ const d=reportData(),type=$("rType").value;
+ const filename="HS_Funding_"+type+"_Report_"+today()+".csv";
+ downloadCSV(filename,d.headers,d.rows);
+}
+function exportBackup(){
+ const data={app:"HS FUNDING",version:1,exportedAt:new Date().toISOString(),hs_customers:customers(),hs_loans:loans(),hs_payments:payments(),hs_settings:getSettings()};
+ downloadCSV("HS_Funding_Backup_"+today()+".csv",["Notice"],[["For a full JSON backup use the JSON export button below."]]);
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+ const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="HS_Funding_Backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function importBackup(){
+ const file=$("backupFile").files[0];if(!file){alert("Choose a backup JSON file first.");return}
+ if(!confirm("Restore replaces current customers, loans, payments and settings. Download a backup first. Continue?"))return;
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const d=JSON.parse(reader.result);
+   if(!d||!Array.isArray(d.hs_customers)||!Array.isArray(d.hs_loans)||!Array.isArray(d.hs_payments))throw new Error("Invalid backup");
+   save(KEY.customers,d.hs_customers);save(KEY.loans,d.hs_loans);save(KEY.payments,d.hs_payments);save(KEY.settings,d.hs_settings||{});
+   refreshAll();loadSettings();alert("Backup restored successfully.");
+  }catch(e){alert("Could not restore this file. Please select a valid HS FUNDING JSON backup.")}
+ };
+ reader.readAsText(file);
+}
+$("lRate").value=String(getSettings().rate||0);
+$("lStart").value=today();$("pDate").value=today();
+$("username").addEventListener("keydown",e=>{if(e.key==="Enter")login()});
+$("password").addEventListener("keydown",e=>{if(e.key==="Enter")login()});
+</script>
+</body>
+</html>
